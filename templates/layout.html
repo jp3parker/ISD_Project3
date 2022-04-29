@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>{% block title %}{% endblock %}</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css">
+        <style>
+
+            body {
+                background-image: url("https://i.pinimg.com/originals/69/3b/b8/693bb8db1380f20f196c83bccbc16aab.png");
+                background-size: 100% 100%;
+                background-attachment: fixed;
+            }
+
+            table {
+                border-collapse: collapse;
+                margin: 25px 0;
+                font-size: 0.9em;
+                font-family: sans-serif;
+                min-width: 400px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+            }
+
+            table th,
+            table td {
+                padding: 12px 15px;
+            }
+
+            table tbody tr {
+                border-bottom: 1px solid #dddddd;
+            }
+
+            table tbody tr:nth-of-type(even) {
+                background-color: #f3f3f3;
+            }
+
+        </style>
+	</head>
+	<body class="loggedin">
+		<nav class="navtop">
+			<div>
+				<h1>Movies Database</h1>
+                <a href="{{ url_for('home') }}"><i class="fas fa-home"></i>Home</a>
+				<a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i>Login Page</a>
+			</div>
+		</nav>
+		<div class="content">
+			{% block content %}{% endblock %}
+		</div>
+	</body>
+</html>
