@@ -8,6 +8,9 @@
 
 <h2>Home Page</h2>
 
+<input type="text" id="searchBar" onkeyup="searchFunct()" placeholder="Search for Movie">
+
+
 {% for i in range(genreTitles|length) %}
 
     <h3>{{ genreTitles[i] }} Movies</h3>
@@ -32,3 +35,13 @@
 </div>
 
 {% endblock %}
+
+<body>
+
+<script>
+function searchFunct() {
+
+}
+</script>
+
+</body>
