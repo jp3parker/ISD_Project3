@@ -23,6 +23,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "db.sqlite")
 
 conn = sqlite3.connect(db_path, check_same_thread=False)
+cursor = conn.cursor()
 
 '''mysql = MySQL()
 
@@ -36,6 +37,29 @@ app.config['MYSQL_DATABASE_DB'] = 'flaskcrud'
 # Intialize MySQL
 mysql.init_app(app)
 '''
+
+
+def buildMovieTable():
+    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name == 'movies';")
+    if cursor.fetchone()[0] == 0:
+        with codecs.open(os.path.join(BASE_DIR, "static/movies.json"), "r", encoding="utf-8") as read_file:
+            data = json.load(read_file)
+        cursor.execute('CREATE TABLE IF NOT EXISTS movies(TITLE TEXT, YEAR INTEGER, CAST TEXT, GENRE TEXT);')
+        for i in range(len(data) - 1, len(data) - 1001, -1):
+            cast = ''
+            if range(len(data[i]['cast'])):
+                cast = data[i]['cast'][0]
+                for actor in range(1, len(data[i]['cast']), 1):
+                    cast += ", " + data[i]['cast'][actor]
+            genres = ''
+            if range(len(data[i]['genres'])):
+                genres = data[i]['genres'][0]
+                for genre in range(1, len(data[i]['genres']), 1):
+                    genres += ", " + data[i]['genres'][genre]
+            cursor.execute('INSERT INTO movies (TITLE, YEAR, CAST, GENRE) VALUES (?, ?, ?, ?)',
+                        (data[i]['title'], data[i]['year'], cast, genres,))
+
+        conn.commit()
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -53,7 +77,6 @@ def login():
 
         # Check if user exists using MySQL
         # conn = mysql.connect()
-        cursor = conn.cursor()
         cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
 
         # Fetch one record and return result
@@ -106,10 +129,7 @@ def register():
         email = request.form['email']
 
         # Check if user exists using MySQL
-        # conn = mysql.connect()    #MySql connector
-        cursor = conn.cursor()
 
-        # cursor.execute('SELECT * FROM users WHERE username = %s', (username,))  #MySql connect statement
         cursor.execute('SELECT * FROM users WHERE username = ?', (username,))  # SqLite Connect statement
         user = cursor.fetchone()
 
@@ -123,9 +143,7 @@ def register():
         elif not username or not password or not email:
             msg = 'Please fill out the form!'
         else:
-            # user doesnt exists and the form data is valid, now insert new user into users table
-            # MySql Insert statement
-            # cursor.execute('INSERT INTO users VALUES (NULL, %s, %s, %s)', (username, hash, email,))
+            # user doesn't exist and the form data is valid, now insert new user into users table
 
             # SqLite Insert Statement
             cursor.execute('INSERT INTO users (firstname, lastname, email, username, password) VALUES (?, ?, ?, ?, ?)',
@@ -149,29 +167,7 @@ def home():
         searchBarPost = request.form["searchBar"]
         return redirect(url_for("search", searchterm=searchBarPost))
 
-    # os.path.join(BASE_DIR, "db.sqlite")
-
-    with codecs.open(os.path.join(BASE_DIR, "static/movies.json"), "r", encoding="utf-8") as read_file:
-        data = json.load(read_file)
-
-    cursor = conn.cursor()
-    cursor.execute('CREATE TABLE IF NOT EXISTS movies(TITLE TEXT, YEAR INTEGER, CAST TEXT, GENRE TEXT);')
-
-    for i in range(len(data) - 1, len(data) - 1001, -1):
-        cast = ''
-        if range(len(data[i]['cast'])):
-            cast = data[i]['cast'][0]
-            for actor in range(1, len(data[i]['cast']), 1):
-                cast += ", " + data[i]['cast'][actor]
-
-        genres = ''
-        if range(len(data[i]['genres'])):
-            genres = data[i]['genres'][0]
-            for genre in range(1, len(data[i]['genres']), 1):
-                genres += ", " + data[i]['genres'][genre]
-
-        cursor.execute('INSERT INTO movies (TITLE, YEAR, CAST, GENRE) VALUES (?, ?, ?, ?)',
-                       (data[i]['title'], data[i]['year'], cast, genres,))
+    buildMovieTable()
 
     genreTitles = ["Action", "Thriller", "Drama", "Comedy", "Horror", "Short", "Documentary", "Western",
                    "Adventure", "Romance", "Crime", "Historical", "Biography", "Fantasy", "Silent",
@@ -182,13 +178,7 @@ def home():
         search = '\'%' + genre + '%\''
         cursor.execute("SELECT DISTINCT * FROM movies WHERE GENRE LIKE %s"
                        " ORDER BY YEAR DESC LIMIT 100" % search)
-        # print(genre)
-        # print('\n\n')
-        # print(cursor.fetchall())
-        # print('\n\n')
         moviesByGenre.append(cursor.fetchall())
-
-    cursor.execute('DROP TABLE IF EXISTS movies;')
 
     if 'loggedin' in session:
         # User is loggedin show them the home page
@@ -200,52 +190,21 @@ def home():
 
 @app.route('/search/<searchterm>')
 def search(searchterm):
-    # os.path.join(BASE_DIR, "db.sqlite")
-
-    with codecs.open(os.path.join(BASE_DIR, "static/movies.json"), "r", encoding="utf-8") as read_file:
-        data = json.load(read_file)
-
-    cursor = conn.cursor()
-    cursor.execute('CREATE TABLE IF NOT EXISTS movies(TITLE TEXT, YEAR INTEGER, CAST TEXT, GENRE TEXT);')
-
     cursor.execute('CREATE TABLE IF NOT EXISTS searchHist(SEARCH TEXT);')
+    cursor.execute('INSERT INTO searchHist (SEARCH) VALUES (?)', (searchterm,))
 
-    for i in range(len(data) - 1, len(data) - 1001, -1):
-        cast = ''
-        if range(len(data[i]['cast'])):
-            cast = data[i]['cast'][0]
-            for actor in range(1, len(data[i]['cast']), 1):
-                cast += ", " + data[i]['cast'][actor]
+    searchterm = '\'%' + searchterm + '%\''
+    cursor.execute("SELECT DISTINCT * FROM movies WHERE TITLE LIKE %s"
+                   " ORDER BY YEAR DESC " % searchterm)
 
-        genres = ''
-        if range(len(data[i]['genres'])):
-            genres = data[i]['genres'][0]
-            for genre in range(1, len(data[i]['genres']), 1):
-                genres += ", " + data[i]['genres'][genre]
+    movieResults = cursor.fetchall()
 
-        cursor.execute('INSERT INTO movies (TITLE, YEAR, CAST, GENRE) VALUES (?, ?, ?, ?)',
-                       (data[i]['title'], data[i]['year'], cast, genres,))
+    conn.commit()
 
-    genreTitles = ["Action"]
-    moviesByGenre = []
+    if 'loggedin' in session:
+        return render_template('search.html', movieResults=movieResults)
 
-    searchterm = str({searchterm})
-
-    res = re.sub('[' + string.punctuation + ']', '', searchterm).split()
-    res = res[0]
-
-    cursor.execute('INSERT INTO searchHist (SEARCH) VALUES (?)', ['res'])
-
-    for genre in genreTitles:
-        search = '\'%' + res + '%\''
-        cursor.execute("SELECT DISTINCT * FROM movies WHERE TITLE LIKE %s"
-                       " ORDER BY YEAR DESC " % search)
-
-        moviesByGenre.append(cursor.fetchall())
-
-    cursor.execute('DROP TABLE IF EXISTS movies;')
-
-    return render_template('search.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre, searchterm=searchterm)
+    return redirect(url_for('login'))
 
 
 if __name__ == "__main__":
