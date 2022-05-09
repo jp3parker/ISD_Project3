@@ -193,5 +193,50 @@ def home():
     return redirect(url_for('login'))
 
 
+@app.route('/search')
+def search():
+    # Check if user is loggedin
+
+    # os.path.join(BASE_DIR, "db.sqlite")
+
+    with codecs.open(os.path.join(BASE_DIR, "static/movies.json"), "r", encoding="utf-8") as read_file:
+        data = json.load(read_file)
+
+    cursor = conn.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS movies(TITLE TEXT, YEAR INTEGER, CAST TEXT, GENRE TEXT);')
+
+    for i in range(len(data) - 1, len(data) - 1001, -1):
+        cast = ''
+        if range(len(data[i]['cast'])):
+            cast = data[i]['cast'][0]
+            for actor in range(1, len(data[i]['cast']), 1):
+                cast += ", " + data[i]['cast'][actor]
+
+        genres = ''
+        if range(len(data[i]['genres'])):
+            genres = data[i]['genres'][0]
+            for genre in range(1, len(data[i]['genres']), 1):
+                genres += ", " + data[i]['genres'][genre]
+
+        cursor.execute('INSERT INTO movies (TITLE, YEAR, CAST, GENRE) VALUES (?, ?, ?, ?)',
+                       (data[i]['title'], data[i]['year'], cast, genres,))
+
+    genreTitles = ["Action"]
+    moviesByGenre = []
+
+    searchterm = 'Light'
+
+    for genre in genreTitles:
+        search = '\'%' + searchterm + '%\''
+        cursor.execute("SELECT DISTINCT * FROM movies WHERE TITLE LIKE %s"
+                       " ORDER BY YEAR DESC " % search)
+
+        moviesByGenre.append(cursor.fetchall())
+
+    cursor.execute('DROP TABLE IF EXISTS movies;')
+
+    return render_template('search.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre)
+
+
 if __name__ == "__main__":
     app.run()
