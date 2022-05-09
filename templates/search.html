@@ -1,12 +1,12 @@
 {% extends 'layout.html' %}
 
-{% block title %}Home{% endblock %}
+{% block title %}Search{% endblock %}
 
 {% block content %}
 
 <div style="background-color: white;margin-top: 0;margin-bottom: 0;">
 
-<h2>Home Page</h2>
+<h2>Search Results</h2>
 
     <label for="searchBar"></label>
     <input type="text" id="searchBar" placeholder="Search for Movie">
@@ -14,7 +14,7 @@
 
 {% for i in range(genreTitles|length) %}
 
-    <h3>{{ genreTitles[i] }} Movies</h3>
+    <h3>Results for 'searchterm'</h3>
     <table>
        {% for movie in moviesByGenre[i] %}
            <tr>
