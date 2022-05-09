@@ -8,6 +8,7 @@ import codecs
 # import mysql.connector
 import re
 import sqlite3
+import string
 import os.path
 
 app = Flask(__name__)
@@ -140,9 +141,13 @@ def register():
     return render_template('register.html', msg=msg)
 
 
-@app.route('/home')
+@app.route('/home', methods=['GET', 'POST'])
 def home():
     # Check if user is loggedin
+
+    if request.method == "POST":
+        searchBarPost = request.form["searchBar"]
+        return redirect(url_for("search", searchterm=searchBarPost))
 
     # os.path.join(BASE_DIR, "db.sqlite")
 
@@ -174,7 +179,7 @@ def home():
     moviesByGenre = []
 
     for genre in genreTitles:
-        search = '\'%'+genre+'%\''
+        search = '\'%' + genre + '%\''
         cursor.execute("SELECT DISTINCT * FROM movies WHERE GENRE LIKE %s"
                        " ORDER BY YEAR DESC LIMIT 100" % search)
         # print(genre)
@@ -191,6 +196,56 @@ def home():
 
     # User is not loggedin redirect to login page
     return redirect(url_for('login'))
+
+
+@app.route('/search/<searchterm>')
+def search(searchterm):
+    # os.path.join(BASE_DIR, "db.sqlite")
+
+    with codecs.open(os.path.join(BASE_DIR, "static/movies.json"), "r", encoding="utf-8") as read_file:
+        data = json.load(read_file)
+
+    cursor = conn.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS movies(TITLE TEXT, YEAR INTEGER, CAST TEXT, GENRE TEXT);')
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS searchHist(SEARCH TEXT);')
+
+    for i in range(len(data) - 1, len(data) - 1001, -1):
+        cast = ''
+        if range(len(data[i]['cast'])):
+            cast = data[i]['cast'][0]
+            for actor in range(1, len(data[i]['cast']), 1):
+                cast += ", " + data[i]['cast'][actor]
+
+        genres = ''
+        if range(len(data[i]['genres'])):
+            genres = data[i]['genres'][0]
+            for genre in range(1, len(data[i]['genres']), 1):
+                genres += ", " + data[i]['genres'][genre]
+
+        cursor.execute('INSERT INTO movies (TITLE, YEAR, CAST, GENRE) VALUES (?, ?, ?, ?)',
+                       (data[i]['title'], data[i]['year'], cast, genres,))
+
+    genreTitles = ["Action"]
+    moviesByGenre = []
+
+    searchterm = str({searchterm})
+
+    res = re.sub('[' + string.punctuation + ']', '', searchterm).split()
+    res = res[0]
+
+    cursor.execute('INSERT INTO searchHist (SEARCH) VALUES (?)', ['res'])
+
+    for genre in genreTitles:
+        search = '\'%' + res + '%\''
+        cursor.execute("SELECT DISTINCT * FROM movies WHERE TITLE LIKE %s"
+                       " ORDER BY YEAR DESC " % search)
+
+        moviesByGenre.append(cursor.fetchall())
+
+    cursor.execute('DROP TABLE IF EXISTS movies;')
+
+    return render_template('search.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre, searchterm=searchterm)
 
 
 if __name__ == "__main__":
