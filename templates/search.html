@@ -8,13 +8,13 @@
 
 <h2>Search Results</h2>
 
-    <label for="searchBar"></label>
-    <input type="text" id="searchBar" placeholder="Search for Movie">
-        <button type="button" onclick="window.location.href='{{ url_for('search') }}';">Search</button>
+    <form action="#" method="post">
+        <p><input type="text" id="searchBar" name="searchBar" placeholder="Search for Movie"></p>
+        <p><input type="submit" name="submit" /></p>
+    </form>
 
 {% for i in range(genreTitles|length) %}
 
-    <h3>Results for 'searchterm'</h3>
     <table>
        {% for movie in moviesByGenre[i] %}
            <tr>

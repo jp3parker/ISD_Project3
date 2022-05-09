@@ -8,9 +8,11 @@
 
 <h2>Home Page</h2>
 
-    <label for="searchBar"></label>
-    <input type="text" id="searchBar" placeholder="Search for Movie">
-        <button type="button" onclick="window.location.href='{{ url_for('search') }}';">Search</button>
+
+    <form action="#" method="post">
+        <p><input type="text" id="searchBar" name="searchBar" placeholder="Search for Movie"></p>
+        <p><input type="submit" name="submit" /></p>
+    </form>
 
 {% for i in range(genreTitles|length) %}
 
