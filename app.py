@@ -190,21 +190,23 @@ def home():
 
 @app.route('/search/<searchterm>')
 def search(searchterm):
-    cursor.execute('CREATE TABLE IF NOT EXISTS searchHist(SEARCH TEXT);')
-    cursor.execute('INSERT INTO searchHist (SEARCH) VALUES (?)', (searchterm,))
-
+    cursor.execute('CREATE TABLE IF NOT EXISTS searchHist(USER TEXT, SEARCH TEXT);')
+    cursor.execute('INSERT INTO searchHist (USER, SEARCH) VALUES (?, ?)', (session['username'], searchterm,))
     searchterm = '\'%' + searchterm + '%\''
     cursor.execute("SELECT DISTINCT * FROM movies WHERE TITLE LIKE %s"
                    " ORDER BY YEAR DESC " % searchterm)
-
     movieResults = cursor.fetchall()
-
     conn.commit()
 
     if 'loggedin' in session:
         return render_template('search.html', movieResults=movieResults)
 
     return redirect(url_for('login'))
+
+
+@app.route('/userDetails')
+def userDetails():
+    return redirect(url_for('home'))
 
 
 if __name__ == "__main__":
