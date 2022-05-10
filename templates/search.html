@@ -25,6 +25,13 @@
             <td>
                 {{ movie[2] }}
             </td>
+            <td>
+                {% if movie[0] in viewed %}
+                    <a href="{{ url_for('viewed', movie=movie[0]) }}">seen</a>
+                {% else %}
+                    <a href="{{ url_for('viewed', movie=movie[0]) }}">not seen</a>
+                {% endif %}
+            </td>
         </tr>
     {% endfor %}
 </table>

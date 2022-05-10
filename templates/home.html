@@ -8,7 +8,6 @@
 
 <h2>Home Page</h2>
 
-
     <form action="#" method="post">
         <p><input type="text" id="searchBar" name="searchBar" placeholder="Search for Movie"></p>
         <p><input type="submit" name="submit" /></p>
@@ -19,7 +18,7 @@
     <h3>{{ genreTitles[i] }} Movies</h3>
     <table>
        {% for movie in moviesByGenre[i] %}
-           <tr>
+           <tr onclick="href='{{ url_for('userDetails') }}';">
             <td>
                 {{ movie[0] }}
             </td>
@@ -28,6 +27,13 @@
             </td>
             <td>
                 {{ movie[2] }}
+            </td>
+            <td>
+                {% if movie[0] in viewed %}
+                    <a href="{{ url_for('viewed', movie=movie[0]) }}">seen</a>
+                {% else %}
+                    <a href="{{ url_for('viewed', movie=movie[0]) }}">not seen</a>
+                {% endif %}
             </td>
         </tr>
        {% endfor %}
@@ -38,7 +44,3 @@
 </div>
 
 {% endblock %}
-
-<body>
-
-</body>

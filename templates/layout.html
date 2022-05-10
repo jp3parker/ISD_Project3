@@ -36,12 +36,21 @@
             }
 
         </style>
+
+        <script type="text/javascript">
+            jQuery(document).ready(function () {
+                jQuery(document).on("click", "tr[data-href]", function() {
+                window.location.href = jQuery(this).attr('data-href');
+            });
+        });
+        </script>
+
 	</head>
 	<body class="loggedin">
 		<nav class="navtop">
 			<div>
 				<h1>Movies Database</h1>
-                <a href="{{ url_for('home') }}"><i class="fas fa-home"></i>Home
+                <a href="{{ url_for('home') }}"><i class="fas fa-home"></i>Home</a>
 				<a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i>Login Page</a>
                 <a href="{{ url_for('userDetails') }}"><i class="fa-solid fa-bars"></i>User Details</a>
 			</div>

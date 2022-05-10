@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+
+{% block title %}User Details{% endblock %}
+
+{% block content %}
+
+    <div style="background-color: white;margin-top: 0;margin-bottom: 0;">
+
+    <h2>Search History</h2>
+
+    <table>
+    {% for search in searches %}
+
+        <tr>
+        <td>
+            {{ search[1] }}
+        </td>
+        </tr>
+
+    {% endfor %}
+    </table>
+
+{% endblock %}
+
+</div>

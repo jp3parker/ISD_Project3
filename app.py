@@ -180,9 +180,15 @@ def home():
                        " ORDER BY YEAR DESC LIMIT 100" % search)
         moviesByGenre.append(cursor.fetchall())
 
+    user = '\''+session['username']+'\''
+    cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % user)
+    viewed = cursor.fetchall()
+    for i in range(0, len(viewed)):
+        viewed[i] = viewed[i][0]
+
     if 'loggedin' in session:
         # User is loggedin show them the home page
-        return render_template('home.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre)
+        return render_template('home.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre, viewed=viewed)
 
     # User is not loggedin redirect to login page
     return redirect(url_for('login'))
@@ -198,15 +204,44 @@ def search(searchterm):
     movieResults = cursor.fetchall()
     conn.commit()
 
+    user = '\'' + session['username'] + '\''
+    cursor.execute("CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);")
+    cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % user)
+    viewed = cursor.fetchall()
+    for i in range(0, len(viewed)):
+        viewed[i] = viewed[i][0]
+
     if 'loggedin' in session:
-        return render_template('search.html', movieResults=movieResults)
+        return render_template('search.html', movieResults=movieResults, viewed=viewed)
 
     return redirect(url_for('login'))
 
 
+@app.route('/viewed/<movie>')
+def viewed(movie):
+    # cursor.execute('DROP TABLE IF EXISTS viewed;')
+    cursor.execute('CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);')
+    movieWQ = '\''+movie+'\''
+    cursor.execute("SELECT count(*) FROM viewed WHERE MOVIE == %s;" % movieWQ)
+    # print(cursor.fetchone()[0])
+    if cursor.fetchone()[0] == 0:
+        print("0 of these movies in viewed")
+        cursor.execute('INSERT INTO viewed (USER, MOVIE) VALUES (?, ?)', (session['username'], movie,))
+    else:
+        print("already one of these movies in viewed")
+        cursor.execute('DELETE FROM viewed WHERE MOVIE == %s;' % movieWQ)
+    conn.commit()
+    return redirect(url_for('home'))
+
+
 @app.route('/userDetails')
 def userDetails():
-    return redirect(url_for('home'))
+
+    user = '\''+session['username']+'\''
+    cursor.execute("SELECT * FROM searchHist WHERE USER = %s" % user)
+    searches = cursor.fetchall()
+
+    return render_template('userDetails.html', searches=searches)
 
 
 if __name__ == "__main__":
