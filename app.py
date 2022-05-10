@@ -3,12 +3,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 import json
 import codecs
-
-# from flaskext.mysql import MySQL
-# import mysql.connector
 import re
 import sqlite3
-import string
 import os.path
 
 app = Flask(__name__)
@@ -57,7 +53,7 @@ def buildMovieTable():
                 for genre in range(1, len(data[i]['genres']), 1):
                     genres += ", " + data[i]['genres'][genre]
             cursor.execute('INSERT INTO movies (TITLE, YEAR, CAST, GENRE) VALUES (?, ?, ?, ?)',
-                        (data[i]['title'], data[i]['year'], cast, genres,))
+                           (data[i]['title'].replace("'", ""), data[i]['year'], cast, genres,))
 
         conn.commit()
 
@@ -117,15 +113,15 @@ def register():
     msg = ''
 
     # Check if "username", "password" and "email" POST requests exist (user submitted form)
-    if request.method == 'POST' and 'username' in request.form and 'password' in request.form and 'email' in request.form:
+    if request.method == 'POST' and 'username' in request.form and 'password' in request.form \
+            and 'email' in request.form:
 
         # Create variables for easy access
         first = request.form['firstname']
         last = request.form['lastname']
-        email = request.form['email']
         username = request.form['username']
         password = request.form['password']
-        hash = generate_password_hash(password)
+        passwprdhash = generate_password_hash(password)
         email = request.form['email']
 
         # Check if user exists using MySQL
@@ -147,9 +143,8 @@ def register():
 
             # SqLite Insert Statement
             cursor.execute('INSERT INTO users (firstname, lastname, email, username, password) VALUES (?, ?, ?, ?, ?)',
-                           (first, last, email, username, hash,))
+                           (first, last, email, username, passwprdhash,))
             conn.commit()
-            msg = 'You have successfully registered!'
             return render_template('index.html')
     elif request.method == 'POST':
         # Form is empty... (no POST data)
@@ -163,6 +158,9 @@ def register():
 def home():
     # Check if user is loggedin
 
+    if 'loggedin' not in session:
+        return redirect(url_for('login'))
+
     if request.method == "POST":
         searchBarPost = request.form["searchBar"]
         return redirect(url_for("search", searchterm=searchBarPost))
@@ -175,27 +173,25 @@ def home():
     moviesByGenre = []
 
     for genre in genreTitles:
-        search = '\'%' + genre + '%\''
+        genreWQ = '\'%' + genre + '%\''
         cursor.execute("SELECT DISTINCT * FROM movies WHERE GENRE LIKE %s"
-                       " ORDER BY YEAR DESC LIMIT 100" % search)
+                       " ORDER BY YEAR DESC LIMIT 100" % genreWQ)
         moviesByGenre.append(cursor.fetchall())
 
-    user = '\''+session['username']+'\''
+    user = '\'' + session['username'] + '\''
     cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % user)
-    viewed = cursor.fetchall()
-    for i in range(0, len(viewed)):
-        viewed[i] = viewed[i][0]
+    viewedMovies = cursor.fetchall()
+    for i in range(0, len(viewedMovies)):
+        viewedMovies[i] = viewedMovies[i][0]
 
-    if 'loggedin' in session:
-        # User is loggedin show them the home page
-        return render_template('home.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre, viewed=viewed)
-
-    # User is not loggedin redirect to login page
-    return redirect(url_for('login'))
+    return render_template('home.html', genreTitles=genreTitles, moviesByGenre=moviesByGenre, viewed=viewedMovies)
 
 
 @app.route('/search/<searchterm>')
 def search(searchterm):
+    if 'loggedin' not in session:
+        return redirect(url_for('login'))
+
     cursor.execute('CREATE TABLE IF NOT EXISTS searchHist(USER TEXT, SEARCH TEXT);')
     cursor.execute('INSERT INTO searchHist (USER, SEARCH) VALUES (?, ?)', (session['username'], searchterm,))
     searchterm = '\'%' + searchterm + '%\''
@@ -207,21 +203,21 @@ def search(searchterm):
     user = '\'' + session['username'] + '\''
     cursor.execute("CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);")
     cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % user)
-    viewed = cursor.fetchall()
-    for i in range(0, len(viewed)):
-        viewed[i] = viewed[i][0]
+    viewedMovies = cursor.fetchall()
+    for i in range(0, len(viewedMovies)):
+        viewedMovies[i] = viewedMovies[i][0]
 
-    if 'loggedin' in session:
-        return render_template('search.html', movieResults=movieResults, viewed=viewed)
-
-    return redirect(url_for('login'))
+    return render_template('search.html', movieResults=movieResults, viewed=viewedMovies)
 
 
 @app.route('/viewed/<movie>')
 def viewed(movie):
+    if 'loggedin' not in session:
+        return redirect(url_for('login'))
+
     # cursor.execute('DROP TABLE IF EXISTS viewed;')
     cursor.execute('CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);')
-    movieWQ = '\''+movie+'\''
+    movieWQ = '\'' + movie + '\''
     cursor.execute("SELECT count(*) FROM viewed WHERE MOVIE == %s;" % movieWQ)
     # print(cursor.fetchone()[0])
     if cursor.fetchone()[0] == 0:
@@ -236,15 +232,17 @@ def viewed(movie):
 
 @app.route('/userDetails')
 def userDetails():
+    if 'loggedin' not in session:
+        return redirect(url_for('login'))
 
-    user = '\''+session['username']+'\''
+    user = '\'' + session['username'] + '\''
     cursor.execute("SELECT * FROM searchHist WHERE USER = %s" % user)
     searches = cursor.fetchall()
 
     cursor.execute("SELECT * FROM viewed WHERE USER = %s" % user)
-    viewed = cursor.fetchall()
+    viewedMovies = cursor.fetchall()
 
-    return render_template('userDetails.html', searches=searches, viewed=viewed)
+    return render_template('userDetails.html', searches=searches, viewed=viewedMovies)
 
 
 if __name__ == "__main__":
