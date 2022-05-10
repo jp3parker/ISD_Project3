@@ -21,6 +21,10 @@ db_path = os.path.join(BASE_DIR, "db.sqlite")
 conn = sqlite3.connect(db_path, check_same_thread=False)
 cursor = conn.cursor()
 
+genreTitles = ["Action", "Thriller", "Drama", "Comedy", "Horror", "Short", "Documentary", "Western",
+               "Adventure", "Romance", "Crime", "Historical", "Biography", "Fantasy", "Silent",
+               "Sports", "War", "Mystery", "Animated", "ScienceFiction", "SuperHero", "Musical"]
+
 '''mysql = MySQL()
 
 app.config['MYSQL_DATABASE_HOST'] = "localhost"
@@ -166,10 +170,6 @@ def home():
         return redirect(url_for("search", searchterm=searchBarPost))
 
     buildMovieTable()
-
-    genreTitles = ["Action", "Thriller", "Drama", "Comedy", "Horror", "Short", "Documentary", "Western",
-                   "Adventure", "Romance", "Crime", "Historical", "Biography", "Fantasy", "Silent",
-                   "Sports", "War", "Mystery", "Animated", "Science Fiction", "SuperHero", "Musical"]
     moviesByGenre = []
 
     for genre in genreTitles:
@@ -215,16 +215,24 @@ def viewed(movie):
     if 'loggedin' not in session:
         return redirect(url_for('login'))
 
+    # cursor.execute('DROP TABLE IF EXISTS categories;')
+    #
     # cursor.execute('DROP TABLE IF EXISTS viewed;')
-    cursor.execute('CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);')
+    # cursor.execute('CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);')
+    # cursor.execute('CREATE TABLE IF NOT EXISTS categories(USER TEXT, COMEDY SMALLINT, HORROR SMALLINT, SHORT SMALLINT, '
+    #                'DOCUMENTARY SMALLINT, WESTERN SMALLINT, ADVENTURE SMALLINT, ROMANCE SMALLINT, CRIME SMALLINT, '
+    #                'DRAMA SMALLINT, ACTION SMALLINT, HISTORICAL SMALLINT, BIOGRAPHY SMALLINT, FANTASY SMALLINT, '
+    #                'SILENT SMALLINT, SPORTS SMALLINT, THRILLER SMALLINT, WAR SMALLINT, MYSTERY SMALLINT, '
+    #                'ANIMATED SMALLINT, SCIENCEFICTION SMALLINT, SUPERHERO SMALLINT, MUSICAL SMALLINT);')
+
     movieWQ = '\'' + movie + '\''
     cursor.execute("SELECT count(*) FROM viewed WHERE MOVIE == %s;" % movieWQ)
     # print(cursor.fetchone()[0])
     if cursor.fetchone()[0] == 0:
-        print("0 of these movies in viewed")
+        updateCategories(movieWQ, 1)
         cursor.execute('INSERT INTO viewed (USER, MOVIE) VALUES (?, ?)', (session['username'], movie,))
     else:
-        print("already one of these movies in viewed")
+        updateCategories(movieWQ, -1)
         cursor.execute('DELETE FROM viewed WHERE MOVIE == %s;' % movieWQ)
     conn.commit()
     return redirect(url_for('home'))
@@ -243,6 +251,30 @@ def userDetails():
     viewedMovies = cursor.fetchall()
 
     return render_template('userDetails.html', searches=searches, viewed=viewedMovies)
+
+
+def updateCategories(movie, increment):
+    user = '\''+session['username']+'\''
+    cursor.execute("SELECT count(*) FROM categories WHERE user == %s;" % user)
+
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('INSERT INTO categories (USER, COMEDY, HORROR, SHORT, DOCUMENTARY, WESTERN, ADVENTURE, ROMANCE, '
+                       'CRIME, DRAMA, ACTION, HISTORICAL, BIOGRAPHY, FANTASY, SILENT, SPORTS, THRILLER, WAR, MYSTERY, '
+                       'ANIMATED, SCIENCEFICTION, SUPERHERO, MUSICAL) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '
+                       '0, 0, 0, 0, 0, 0, 0, 0, 0, 0)', (session['username'],))
+    cursor.execute('SELECT GENRE FROM movies WHERE TITLE == %s' % movie)
+    movieGenres = cursor.fetchone()
+    movieGenres = movieGenres[0].split(", ")
+    for genre in genreTitles:
+        if genre in movieGenres:
+            cursor.execute("UPDATE categories SET %s = %s + %d WHERE user == %s" % (genre, genre, increment, user))
+
+    conn.commit()
+
+    cursor.execute("SELECT * FROM categories WHERE user == %s" % user)
+    print(cursor.fetchall())
+    # for genre in genreTitles:
+    #     "UPDATE TableName SET TableField = TableField + 1 WHERE SomeFilterField = @ParameterID"
 
 
 if __name__ == "__main__":
