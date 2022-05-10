@@ -241,7 +241,10 @@ def userDetails():
     cursor.execute("SELECT * FROM searchHist WHERE USER = %s" % user)
     searches = cursor.fetchall()
 
-    return render_template('userDetails.html', searches=searches)
+    cursor.execute("SELECT * FROM viewed WHERE USER = %s" % user)
+    viewed = cursor.fetchall()
+
+    return render_template('userDetails.html', searches=searches, viewed=viewed)
 
 
 if __name__ == "__main__":

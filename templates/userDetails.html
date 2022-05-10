@@ -6,6 +6,18 @@
 
     <div style="background-color: white;margin-top: 0;margin-bottom: 0;">
 
+    <h2>Movies You Have Seen</h2>
+    <table>
+    {% for movie in viewed %}
+        <tr>
+        <td>
+            {{ movie[1] }}
+        </td>
+        </tr>
+    {% endfor %}
+    </table>
+
+
     <h2>Search History</h2>
 
     <table>
