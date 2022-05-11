@@ -21,9 +21,9 @@ db_path = os.path.join(BASE_DIR, "db.sqlite")
 conn = sqlite3.connect(db_path, check_same_thread=False)
 cursor = conn.cursor()
 
-genreTitles = ["Action", "Thriller", "Drama", "Comedy", "Horror", "Short", "Documentary", "Western",
-               "Adventure", "Romance", "Crime", "Historical", "Biography", "Fantasy", "Silent",
-               "Sports", "War", "Mystery", "Animated", "ScienceFiction", "SuperHero", "Musical"]
+genreTitles = ["Comedy", "Horror", "Short", "Documentary", "Western", "Adventure", "Romance", "Crime", "Drama",
+               "Action", "Historical", "Biography", "Fantasy", "Silent", "Sports", "Thriller", "War", "Mystery",
+               "Animated", "Science Fiction", "SuperHero", "Musical"]
 
 '''mysql = MySQL()
 
@@ -219,15 +219,15 @@ def viewed(movie):
     #
     # cursor.execute('DROP TABLE IF EXISTS viewed;')
     # cursor.execute('CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);')
-    # cursor.execute('CREATE TABLE IF NOT EXISTS categories(USER TEXT, COMEDY SMALLINT, HORROR SMALLINT, SHORT SMALLINT, '
+    # cursor.execute('CREATE TABLE IF NOT EXISTS categories(USER TEXT, COMEDY SMALLINT, HORROR SMALLINT, '
+    # 'SHORT SMALLINT, '
     #                'DOCUMENTARY SMALLINT, WESTERN SMALLINT, ADVENTURE SMALLINT, ROMANCE SMALLINT, CRIME SMALLINT, '
     #                'DRAMA SMALLINT, ACTION SMALLINT, HISTORICAL SMALLINT, BIOGRAPHY SMALLINT, FANTASY SMALLINT, '
     #                'SILENT SMALLINT, SPORTS SMALLINT, THRILLER SMALLINT, WAR SMALLINT, MYSTERY SMALLINT, '
-    #                'ANIMATED SMALLINT, SCIENCEFICTION SMALLINT, SUPERHERO SMALLINT, MUSICAL SMALLINT);')
+    #                'ANIMATED SMALLINT, [SCIENCE FICTION] SMALLINT, SUPERHERO SMALLINT, MUSICAL SMALLINT);')
 
     movieWQ = '\'' + movie + '\''
     cursor.execute("SELECT count(*) FROM viewed WHERE MOVIE == %s;" % movieWQ)
-    # print(cursor.fetchone()[0])
     if cursor.fetchone()[0] == 0:
         updateCategories(movieWQ, 1)
         cursor.execute('INSERT INTO viewed (USER, MOVIE) VALUES (?, ?)', (session['username'], movie,))
@@ -250,7 +250,11 @@ def userDetails():
     cursor.execute("SELECT * FROM viewed WHERE USER = %s" % user)
     viewedMovies = cursor.fetchall()
 
-    return render_template('userDetails.html', searches=searches, viewed=viewedMovies)
+    cursor.execute("SELECT * FROM categories WHERE USER = %s" % user)
+    categories = cursor.fetchone()
+
+    return render_template('userDetails.html', searches=searches, viewed=viewedMovies, categorieNums=categories,
+                           genreTitles=genreTitles)
 
 
 def updateCategories(movie, increment):
@@ -260,21 +264,18 @@ def updateCategories(movie, increment):
     if cursor.fetchone()[0] == 0:
         cursor.execute('INSERT INTO categories (USER, COMEDY, HORROR, SHORT, DOCUMENTARY, WESTERN, ADVENTURE, ROMANCE, '
                        'CRIME, DRAMA, ACTION, HISTORICAL, BIOGRAPHY, FANTASY, SILENT, SPORTS, THRILLER, WAR, MYSTERY, '
-                       'ANIMATED, SCIENCEFICTION, SUPERHERO, MUSICAL) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '
+                       'ANIMATED, [SCIENCE FICTION], SUPERHERO, MUSICAL) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '
                        '0, 0, 0, 0, 0, 0, 0, 0, 0, 0)', (session['username'],))
     cursor.execute('SELECT GENRE FROM movies WHERE TITLE == %s' % movie)
     movieGenres = cursor.fetchone()
     movieGenres = movieGenres[0].split(", ")
     for genre in genreTitles:
         if genre in movieGenres:
-            cursor.execute("UPDATE categories SET %s = %s + %d WHERE user == %s" % (genre, genre, increment, user))
+            cursor.execute("UPDATE categories SET [%s] = [%s] + %d WHERE user == %s" % (genre, genre, increment, user))
 
     conn.commit()
 
     cursor.execute("SELECT * FROM categories WHERE user == %s" % user)
-    print(cursor.fetchall())
-    # for genre in genreTitles:
-    #     "UPDATE TableName SET TableField = TableField + 1 WHERE SomeFilterField = @ParameterID"
 
 
 if __name__ == "__main__":

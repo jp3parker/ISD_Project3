@@ -6,6 +6,20 @@
 
     <div style="background-color: white;margin-top: 0;margin-bottom: 0;">
 
+    <h2>Movies You Have Seen by Category</h2>
+    <table>
+    {% for i in range(genreTitles|length) %}
+        <tr>
+        <td>
+            {{ genreTitles[i] }}
+        </td>
+        <td>
+            {{ categorieNums[i+1] }}
+        </td>
+        </tr>
+    {% endfor %}
+    </table>
+
     <h2>Movies You Have Seen</h2>
     <table>
     {% for movie in viewed %}
