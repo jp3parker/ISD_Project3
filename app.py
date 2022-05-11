@@ -227,8 +227,12 @@ def viewed(movie):
     #                'ANIMATED SMALLINT, [SCIENCE FICTION] SMALLINT, SUPERHERO SMALLINT, MUSICAL SMALLINT);')
 
     movieWQ = '\'' + movie + '\''
-    cursor.execute("SELECT count(*) FROM viewed WHERE MOVIE == %s;" % movieWQ)
-    if cursor.fetchone()[0] == 0:
+    userWQ = '\'' + session['username'] + '\''
+    cursor.execute("SELECT count(*) FROM viewed WHERE USER == %s AND MOVIE == %s;" % (userWQ, movieWQ))
+    count = cursor.fetchone()
+    print("num of movies in viewed = ")
+    print(count)
+    if count[0] == 0:
         updateCategories(movieWQ, 1)
         cursor.execute('INSERT INTO viewed (USER, MOVIE) VALUES (?, ?)', (session['username'], movie,))
     else:
@@ -272,10 +276,13 @@ def updateCategories(movie, increment):
     for genre in genreTitles:
         if genre in movieGenres:
             cursor.execute("UPDATE categories SET [%s] = [%s] + %d WHERE user == %s" % (genre, genre, increment, user))
+            print("incremented a genre in categories")
 
     conn.commit()
 
     cursor.execute("SELECT * FROM categories WHERE user == %s" % user)
+    print("user categories after updateCategories()")
+    print(cursor.fetchall())
 
 
 if __name__ == "__main__":
