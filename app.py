@@ -89,6 +89,15 @@ def login():
             session['loggedin'] = True
             session['firstname'] = user[0]
             session['username'] = user[3]
+            session['usernameWQ'] = '\''+user[3]+'\''
+
+            cursor.execute("SELECT count(*) FROM categories WHERE user == %s;" % session['usernameWQ'])
+            if cursor.fetchone()[0] == 0:
+                cursor.execute('INSERT INTO categories (USER, COMEDY, HORROR, SHORT, DOCUMENTARY, WESTERN, ADVENTURE, '
+                               'ROMANCE, CRIME, DRAMA, ACTION, HISTORICAL, BIOGRAPHY, FANTASY, SILENT, SPORTS, '
+                               'THRILLER, WAR, MYSTERY, ANIMATED, [SCIENCE FICTION], SUPERHERO, MUSICAL) VALUES (?, 0, '
+                               '0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)', (session['username'],))
+                conn.commit()
 
             # Redirect to home page
             return redirect(url_for('home'))
@@ -106,6 +115,7 @@ def logout():
     session.pop('loggedin', None)
     session.pop('firstname', None)
     session.pop('username', None)
+    session.pop('usernameWQ', None)
 
     # Redirect to login page
     return redirect(url_for('login'))
@@ -169,7 +179,6 @@ def home():
         searchBarPost = request.form["searchBar"]
         return redirect(url_for("search", searchterm=searchBarPost))
 
-    buildMovieTable()
     moviesByGenre = []
 
     for genre in genreTitles:
@@ -178,8 +187,7 @@ def home():
                        " ORDER BY YEAR DESC LIMIT 100" % genreWQ)
         moviesByGenre.append(cursor.fetchall())
 
-    user = '\'' + session['username'] + '\''
-    cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % user)
+    cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % session['usernameWQ'])
     viewedMovies = cursor.fetchall()
     for i in range(0, len(viewedMovies)):
         viewedMovies[i] = viewedMovies[i][0]
@@ -192,7 +200,6 @@ def search(searchterm):
     if 'loggedin' not in session:
         return redirect(url_for('login'))
 
-    cursor.execute('CREATE TABLE IF NOT EXISTS searchHist(USER TEXT, SEARCH TEXT);')
     cursor.execute('INSERT INTO searchHist (USER, SEARCH) VALUES (?, ?)', (session['username'], searchterm,))
     searchterm = '\'%' + searchterm + '%\''
     cursor.execute("SELECT DISTINCT * FROM movies WHERE TITLE LIKE %s"
@@ -200,9 +207,7 @@ def search(searchterm):
     movieResults = cursor.fetchall()
     conn.commit()
 
-    user = '\'' + session['username'] + '\''
-    cursor.execute("CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);")
-    cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % user)
+    cursor.execute("SELECT MOVIE FROM viewed WHERE USER == %s" % session['usernameWQ'])
     viewedMovies = cursor.fetchall()
     for i in range(0, len(viewedMovies)):
         viewedMovies[i] = viewedMovies[i][0]
@@ -214,25 +219,9 @@ def search(searchterm):
 def viewed(movie):
     if 'loggedin' not in session:
         return redirect(url_for('login'))
-
-    # cursor.execute('DROP TABLE IF EXISTS categories;')
-    #
-    # cursor.execute('DROP TABLE IF EXISTS viewed;')
-    # cursor.execute('CREATE TABLE IF NOT EXISTS viewed(USER TEXT, MOVIE TEXT);')
-    # cursor.execute('CREATE TABLE IF NOT EXISTS categories(USER TEXT, COMEDY SMALLINT, HORROR SMALLINT, '
-    # 'SHORT SMALLINT, '
-    #                'DOCUMENTARY SMALLINT, WESTERN SMALLINT, ADVENTURE SMALLINT, ROMANCE SMALLINT, CRIME SMALLINT, '
-    #                'DRAMA SMALLINT, ACTION SMALLINT, HISTORICAL SMALLINT, BIOGRAPHY SMALLINT, FANTASY SMALLINT, '
-    #                'SILENT SMALLINT, SPORTS SMALLINT, THRILLER SMALLINT, WAR SMALLINT, MYSTERY SMALLINT, '
-    #                'ANIMATED SMALLINT, [SCIENCE FICTION] SMALLINT, SUPERHERO SMALLINT, MUSICAL SMALLINT);')
-
     movieWQ = '\'' + movie + '\''
-    userWQ = '\'' + session['username'] + '\''
-    cursor.execute("SELECT count(*) FROM viewed WHERE USER == %s AND MOVIE == %s;" % (userWQ, movieWQ))
-    count = cursor.fetchone()
-    print("num of movies in viewed = ")
-    print(count)
-    if count[0] == 0:
+    cursor.execute("SELECT count(*) FROM viewed WHERE USER == %s AND MOVIE == %s;" % (session['usernameWQ'], movieWQ))
+    if cursor.fetchone()[0] == 0:
         updateCategories(movieWQ, 1)
         cursor.execute('INSERT INTO viewed (USER, MOVIE) VALUES (?, ?)', (session['username'], movie,))
     else:
@@ -247,14 +236,13 @@ def userDetails():
     if 'loggedin' not in session:
         return redirect(url_for('login'))
 
-    user = '\'' + session['username'] + '\''
-    cursor.execute("SELECT * FROM searchHist WHERE USER = %s" % user)
+    cursor.execute("SELECT * FROM searchHist WHERE USER = %s" % session['usernameWQ'])
     searches = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM viewed WHERE USER = %s" % user)
+    cursor.execute("SELECT * FROM viewed WHERE USER = %s" % session['usernameWQ'])
     viewedMovies = cursor.fetchall()
 
-    cursor.execute("SELECT * FROM categories WHERE USER = %s" % user)
+    cursor.execute("SELECT * FROM categories WHERE USER = %s" % session['usernameWQ'])
     categories = cursor.fetchone()
 
     return render_template('userDetails.html', searches=searches, viewed=viewedMovies, categorieNums=categories,
@@ -262,27 +250,13 @@ def userDetails():
 
 
 def updateCategories(movie, increment):
-    user = '\''+session['username']+'\''
-    cursor.execute("SELECT count(*) FROM categories WHERE user == %s;" % user)
-
-    if cursor.fetchone()[0] == 0:
-        cursor.execute('INSERT INTO categories (USER, COMEDY, HORROR, SHORT, DOCUMENTARY, WESTERN, ADVENTURE, ROMANCE, '
-                       'CRIME, DRAMA, ACTION, HISTORICAL, BIOGRAPHY, FANTASY, SILENT, SPORTS, THRILLER, WAR, MYSTERY, '
-                       'ANIMATED, [SCIENCE FICTION], SUPERHERO, MUSICAL) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '
-                       '0, 0, 0, 0, 0, 0, 0, 0, 0, 0)', (session['username'],))
     cursor.execute('SELECT GENRE FROM movies WHERE TITLE == %s' % movie)
-    movieGenres = cursor.fetchone()
-    movieGenres = movieGenres[0].split(", ")
+    movieGenres = cursor.fetchone()[0].split(", ")
     for genre in genreTitles:
         if genre in movieGenres:
-            cursor.execute("UPDATE categories SET [%s] = [%s] + %d WHERE user == %s" % (genre, genre, increment, user))
-            print("incremented a genre in categories")
-
+            cursor.execute("UPDATE categories SET [%s] = [%s] + %d WHERE user == %s" % (genre, genre, increment,
+                                                                                        session['usernameWQ']))
     conn.commit()
-
-    cursor.execute("SELECT * FROM categories WHERE user == %s" % user)
-    print("user categories after updateCategories()")
-    print(cursor.fetchall())
 
 
 if __name__ == "__main__":
